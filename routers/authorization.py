@@ -4,16 +4,17 @@ from fastapi.param_functions import Depends
 from sqlalchemy.orm import Session
 import schemas, models, database
 from . import token
-from hashing import Hash
-# from .token import create_access_token 
 from fastapi.security import OAuth2PasswordRequestForm
 from passlib.context import CryptContext
+from hashing import Hash
 
 
 pwd_cxt = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 router = APIRouter(tags=['Authentication'])
 
+
+user_role = []
 
 @router.post('/login')
 def login(request: OAuth2PasswordRequestForm = Depends(),  db: Session = Depends(database.get_db)):
@@ -22,12 +23,13 @@ def login(request: OAuth2PasswordRequestForm = Depends(),  db: Session = Depends
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Invalid username')
 
-    if not request.password == user.password:
+    if not Hash.verify(request.password,user.password):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail='Invalid Password')
+
     
+    user_role.append(str(user.role))
 
-
-    access_token = token. create_access_token(data={"sub": user.username})
+    access_token = token.create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
 
